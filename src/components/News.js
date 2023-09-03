@@ -1,115 +1,92 @@
-import React, { Component } from 'react'
+import { useEffect, useState } from 'react'
 import NewsItems from './NewsItems'
-import { Spinner } from './Spinner'
+import Spinner  from './Spinner'
 import PropTypes from 'prop-types'
 import InfiniteScroll from 'react-infinite-scroll-component'
+import defaultImg from "./DefaultImage.jpg"
 
+const News = (props) => {
+  const [articles,setArticles] = useState([]);
+  const [loading,setLoading] = useState(true)
+  const [page,setPage] = useState(1)
+  const [totalResults,setTotalResults] = useState(0);
 
-export default class News extends Component {
-  static defaultProps = {
-    country:'in',
-    pageSize:8,
-    category:'general'
-  }
-  static propTypes = {
-    country: PropTypes.string,
-    pageSize: PropTypes.number,
-    category: PropTypes.string
-  }
-  capitalizeFirstLetter = (str) =>{
+  const capitalizeFirstLetter = (str) =>{
     return str[0].toUpperCase() + str.slice(1)
   }
-  constructor(props){
-    super();
-    // console.log("Constructor from news component")
-    this.state={
-      articles : [],
-      loading : true,
-      page:1,
-      totalResults:0
-    }
-    console.log(props.category)
-    document.title = `${this.capitalizeFirstLetter(props.category)} - NewsMonkey`
-  }
-
-  async updateNews(){
-    this.props.setProgress(10);
-    const url = `https://newsapi.org/v2/top-headlines?country=${this.props.country}&category=${this.props.category}&apiKey=${this.props.apiKey}&page=${this.state.page}&pageSize=${this.props.pageSize}`
-    this.props.setProgress(30);
-    this.setState({loading:true});
+  const  updateNews = async () =>{
+    props.setProgress(10);
+    const url = `https://newsapi.org/v2/top-headlines?country=${props.country}&category=${props.category}&apiKey=${props.apiKey}&page=${page}&pageSize=${props.pageSize}`
+    props.setProgress(30);
+    setLoading(true);
     let data = await fetch(url);
     let parsedData = await data.json();
-    this.props.setProgress(60);
-    this.setState({
-      articles:parsedData.articles,
-      totalResults:parsedData.totalResults,
-      loading:false
-    })
-    this.props.setProgress(100);
+    props.setProgress(60);
+    setArticles(parsedData.articles);
+    setTotalResults(parsedData.totalResults);
+    setLoading(false)
+    props.setProgress(100);
   }
+  
+  useEffect(() =>{
+    document.title = `${capitalizeFirstLetter(props.category)} - NewsMonkey`;
+    updateNews();
+    // eslint-disable-next-line
+  },[]) 
 
-  async componentDidMount(){
-    this.updateNews();
-  }
-
-  handleNextClick = async () =>{
-    this.setState({
-      page:this.state.page+1
-    })
-    this.updateNews();
-  }
-  handlePrevClick = async () =>{
-    this.setState({
-      page:this.state.page-1
-    })
-    this.updateNews();
-  }
-  fetchMoreData = async () => {
-    this.setState({
-      page:this.state.page+1
-    })
-    const url = `https://newsapi.org/v2/top-headlines?country=${this.props.country}&category=${this.props.category}&apiKey=${this.props.apiKey}&page=${this.state.page}&pageSize=${this.props.pageSize}`
-    this.setState({loading:true});
+  const fetchMoreData = async () => {
+    setPage(page+1)
+    const url = `https://newsapi.org/v2/top-headlines?country=${props.country}&category=${props.category}&apiKey=${props.apiKey}&page=${page}&pageSize=${props.pageSize}`
+    setLoading(true);
     let data = await fetch(url);
+    // console.log(data);
     let parsedData = await data.json();
-    this.setState({
-      articles:this.state.articles.concat(parsedData.articles),
-      totalResults:parsedData.totalResults,
-      loading:false
-    })
-
+    setArticles(articles.concat(parsedData.articles));
+    setTotalResults(parsedData.totalResults)
+    setLoading(false)
   };
-  cnt=1;
-  render() {
 
-    return (
-      <>
-        <h1 className="text-center" style = {{margin:'40px'}}>NewsMonkey - Top {this.capitalizeFirstLetter(this.props.category)} HeadLines</h1>        
-        <InfiniteScroll
-          dataLength={this.state.articles.length}
-          next={this.fetchMoreData}
-          hasMore={this.state.articles.length!==this.state.totalResults}
-          loader={<Spinner/>}
-        >
-          <div className="container">
-            <div className="row">
-              {this.state.articles.map((element)=>{
-                return <div className="col-md-4" key={element.url?element.url:this.cnt++}>
-                      <NewsItems 
-                        title={element.title?element.title.slice(0,43):''} 
-                        description={element.description? element.description.slice(0,88):''} 
-                        imageUrl={element.urlToImage?element.urlToImage:"https://techcrunch.com/wp-content/uploads/2018/07/Apollo-ACE-thruster-firing-June.jpg?w=1154"} 
-                        newsUrl={element.url}
-                        author={element.author}
-                        date={element.publishedAt}
-                        source={element.source.name} />
-                  </div>
-              })}
+  return (
+    <>
+      <h1 className="text-center" style = {{marginTop:'100px'}}>NewsMonkey - Top {capitalizeFirstLetter(props.category)} HeadLines</h1>        
+      {loading && <Spinner/>}
+      <InfiniteScroll
+        dataLength={articles?articles.length:0}
+        next={fetchMoreData}
+        hasMore={articles ? articles.length!==totalResults : false}
+        loader={<Spinner/>}
+      >
+        <div className="container">
+          <div className="row">
+            {articles.map((element,i)=>{
+              return <div className="col-md-4" key={i}>
+                    <NewsItems 
+                      title={element.title?element.title.slice(0,43):''} 
+                      description={element.description? element.description.slice(0,88):''} 
+                      imageUrl={element.urlToImage?element.urlToImage:"https://www.hindustantimes.com/ht-img/img/2023/09/02/1600x900/salaar_1693647715443_1693647715642.jpeg"} 
+                      newsUrl={element.url}
+                      author={element.author}
+                      date={element.publishedAt}
+                      source={element.source.name} />
+                </div>
+            })}
 
-            </div>
           </div>
-        </InfiniteScroll>
-      </>
-    )
-  }
+        </div>
+      </InfiniteScroll>
+    </>
+  )
+}
+
+export default News;
+
+News.defaultProps = {
+  country:'in',
+  pageSize:8,
+  category:'general'
+}
+News.propTypes = {
+  country: PropTypes.string,
+  pageSize: PropTypes.number,
+  category: PropTypes.string
 }
