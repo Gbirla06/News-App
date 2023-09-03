@@ -81,7 +81,6 @@ export default class News extends Component {
   };
   cnt=1;
   render() {
-    // console.log("render");
 
     return (
       <>
